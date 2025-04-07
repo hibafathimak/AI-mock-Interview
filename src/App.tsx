@@ -16,18 +16,15 @@ function App() {
   return (
     <>
       <Routes>
-        {/* Public Routes */}
         <Route element={<PublicLayout />}>
           <Route index element={<Landing />} />
         </Route>
 
-        {/* Authentication Routes */}
         <Route element={<AuthenticationLayout />}>
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/signin" element={<SignInPage />} />
         </Route>
 
-        {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/create-mock" element={<CreateInterview />} />
@@ -36,7 +33,6 @@ function App() {
           <Route path="/feedback/:interviewId" element={<Feedback />} />
         </Route>
 
-        {/* Default Route */}
         <Route path="*" element={<SignInPage />} />
       </Routes>
     </>

@@ -18,12 +18,11 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    navigate("/signin");
+    navigate("/");
   };
 
   return (
     <nav className="px-6 py-4 flex items-center justify-between w-full border-b shadow-sm  relative">
-      {/* Left Side Brand */}
       <a
         href="/dashboard"
         className="flex items-center gap-2 text-xl font-bold text-gray-800"
@@ -32,7 +31,6 @@ export default function Navbar() {
         <span>MockAI</span>
       </a>
 
-      {/* Mobile Menu Toggle */}
       <button
         className="md:hidden text-gray-700"
         onClick={() => setMenuOpen((prev) => !prev)}
@@ -40,7 +38,6 @@ export default function Navbar() {
         {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      {/* Desktop Menu */}
       <div className="hidden md:flex items-center gap-4">
         <div className="flex items-center gap-2">
           <CircleUserRound className="w-7 h-7 text-gray-700" />
@@ -59,7 +56,6 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
       {menuOpen && (
         <div className="absolute top-full right-4 mt-2 w-[92vw] sm:w-[300px] bg-white border rounded-xl shadow-md z-50 p-4 flex flex-col gap-4 md:hidden">
           <div className="flex items-center gap-2">

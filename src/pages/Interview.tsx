@@ -2,13 +2,21 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/firebaseConfig";
-import { Video, Mic, Loader2, HelpCircle, XCircle } from "lucide-react";
+import {
+  Video,
+  Loader2,
+  HelpCircle,
+  XCircle,
+  AlertTriangle,
+  Sparkles,
+} from "lucide-react";
 import { Interview as InterviewType } from "@/types";
 import Webcam from "react-webcam";
 
 const Interview = () => {
   const { interviewId } = useParams();
-  const [interviewDetails, setInterviewDetails] = useState<InterviewType | null>(null);
+  const [interviewDetails, setInterviewDetails] =
+    useState<InterviewType | null>(null);
   const [loading, setLoading] = useState(true);
   const [cameraOn, setCameraOn] = useState(false);
   const webcamRef = useRef<Webcam>(null);
@@ -51,10 +59,26 @@ const Interview = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 min-h-[calc(100vh-160px)]">
-      <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:mx-10">
-        {/* Left Panel */}
-        <div className="border-2 p-4 md:p-6 rounded-2xl w-full md:w-2/3 bg-white shadow">
+    <div className="min-h-[calc(100vh-160px)] md:px-10 px-4 py-6 space-y-6">
+      <div className="mt-2 p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-md shadow text-sm md:text-base">
+        <div className="flex items-start gap-3 text-start">
+          <AlertTriangle className="w-5 h-5 mt-1 text-blue-600" />
+          <div>
+            <p>
+              Please enable your webcam and microphone to start the AI-generated
+              mock interview. The interview consists of five questions. You'll
+              receive a personalized report based on your responses at the end.
+            </p>
+            <p className="mt-4">
+              <span className="font-medium">Note:</span> Your video is{" "}
+              <strong>never recorded</strong>. You can disable your webcam at
+              any time.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="flex w-full flex-col md:flex-row gap-4 md:gap-10 ">
+        <div className="w-full lg:w-[70%] border-2 p-4 md:p-6 rounded-2xl bg-white shadow h-fit">
           <h1 className="text-2xl md:text-3xl font-bold mb-4 flex items-center gap-2">
             <HelpCircle className="text-blue-500" /> Interview Info
           </h1>
@@ -89,43 +113,28 @@ const Interview = () => {
                   {interviewDetails.description}
                 </p>
               )}
-
-              <div className="mt-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-md shadow text-sm md:text-base">
-                ⚠️ Please enable your webcam and microphone to start the
-                AI-generated mock interview. The interview consists of five
-                questions. You’ll receive a personalized report based on your
-                responses at the end. <br />
-                <br />
-                <span className="font-medium">Note:</span> Your video is{" "}
-                <strong>never recorded</strong>. You can disable your webcam at
-                any time.
-              </div>
             </div>
           )}
         </div>
 
-        {/* Right Panel */}
-        <div className="flex flex-col items-center justify-start gap-6 w-full md:w-1/3">
-          {/* Video Section */}
-          <div className="border-2 border-gray-300 rounded-2xl w-full h-48 md:h-64 flex items-center justify-center bg-gray-100 shadow-inner relative overflow-hidden">
+        <div className="w-full lg:w-[30%] flex flex-col gap-4">
+          <div className="border-2 border-gray-300 rounded-2xl h-52 md:h-64 flex items-center justify-center bg-gray-100 shadow-inner overflow-hidden">
             {cameraOn ? (
               <Webcam
                 ref={webcamRef}
-                audio={true}
                 screenshotFormat="image/jpeg"
                 videoConstraints={videoConstraints}
                 className="w-full h-full object-cover rounded-2xl"
               />
             ) : (
-              <Video className="w-8 h-8 md:w-10 md:h-10 text-gray-400" />
+              <Video className="w-10 h-10 text-gray-400" />
             )}
           </div>
 
-          {/* Controls */}
           <div className="flex flex-col items-center gap-4 w-full">
             <button
               onClick={() => setCameraOn((prev) => !prev)}
-              className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow transition w-full"
+              className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow w-full"
             >
               {cameraOn ? (
                 <>
@@ -137,11 +146,14 @@ const Interview = () => {
                 </>
               )}
             </button>
+
             <button
-              className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow transition w-full"
-              onClick={()=>{navigate(`/interview-session/${interviewId}/start`)}}
+              onClick={() =>
+                navigate(`/interview-session/${interviewId}/start`)
+              }
+              className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow w-full"
             >
-              <Mic size={20} /> Start Interview
+              <Sparkles size={20} /> Start Interview
             </button>
           </div>
         </div>

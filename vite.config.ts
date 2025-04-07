@@ -8,7 +8,8 @@ dotenv.config();
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(),[require("tailwind-scrollbar")],
+
+  plugins: [react(), tailwindcss()
 ],
   resolve: {
     alias: {

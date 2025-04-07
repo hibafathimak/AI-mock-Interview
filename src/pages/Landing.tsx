@@ -62,7 +62,7 @@ export default function LandingPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-8 bg-white bg-opacity-90 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center h-full">
-              <div className="p-4 bg-blue-100 rounded-full mb-6">
+              <div className="p-4 bg-[#DBE1EE] rounded-full mb-6">
                 <Bot className="w-8 h-8 text-blue-500" />
               </div>
               <h3 className="text-xl font-semibold mb-3">AI-Powered Questions</h3>
@@ -70,7 +70,7 @@ export default function LandingPage() {
             </div>
             
             <div className="p-8 bg-white bg-opacity-90 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center h-full">
-              <div className="p-4 bg-blue-100 rounded-full mb-6">
+              <div className="p-4 bg-[#DBE1EE] rounded-full mb-6">
                 <Mic className="w-8 h-8 text-blue-500" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Voice Interaction</h3>
@@ -78,7 +78,7 @@ export default function LandingPage() {
             </div>
             
             <div className="p-8 bg-white bg-opacity-90 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center h-full">
-              <div className="p-4 bg-blue-100 rounded-full mb-6">
+              <div className="p-4 bg-[#DBE1EE] rounded-full mb-6">
                 <BarChart className="w-8 h-8 text-blue-500" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Performance Analytics</h3>
@@ -86,7 +86,7 @@ export default function LandingPage() {
             </div>
             
             <div className="p-8 bg-white bg-opacity-90 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-center h-full">
-              <div className="p-4 bg-blue-100 rounded-full mb-6">
+              <div className="p-4 bg-[#DBE1EE] rounded-full mb-6">
                 <History className="w-8 h-8 text-blue-500" />
               </div>
               <h3 className="text-xl font-semibold mb-3">Past Interviews</h3>
@@ -102,7 +102,7 @@ export default function LandingPage() {
           <div className="relative z-10">
             <h2 className="text-3xl font-bold mb-4">Ready to Ace Your Next Interview?</h2>
             <p className="text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
-              Join thousands of job seekers who've improved their interview skills with MockAI's personalized feedback.
+            Level up your interview game with MockAI — get tailored feedback and insights to help you land your dream job.
             </p>
             <Button 
               className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 text-lg font-medium rounded-full shadow-md hover:shadow-lg transition-all duration-300" 
@@ -111,11 +111,10 @@ export default function LandingPage() {
               Join Now
             </Button>
           </div>
-          
-          {/* Background decoration */}
-          <div className="absolute top-0 left-0 w-full h-full opacity-10">
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-blue-400 -mr-20 -mt-20"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-blue-400 -ml-20 -mb-20"></div>
+
+          <div className="absolute top-0 left-0 w-full h-full bg-white ">
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-blue-50 -mr-20 -mt-20"></div>
+            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-blue-50 -ml-20 -mb-20"></div>
           </div>
         </div>
       </section>
