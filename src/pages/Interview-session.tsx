@@ -14,9 +14,9 @@ import {
   Volume2,
 } from "lucide-react";
 import Webcam from "react-webcam";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/authContext";
+import { evaluateAnswer } from "@/lib/aiEvaluation"; 
 
 declare global {
   interface Window {
@@ -24,8 +24,6 @@ declare global {
     webkitSpeechRecognition: any;
   }
 }
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
 
 const InterviewSession = () => {
   const { interviewId } = useParams();
@@ -38,6 +36,7 @@ const InterviewSession = () => {
   const [typedAnswers, setTypedAnswers] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [submittedIndexes, setSubmittedIndexes] = useState<number[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const webcamRef = useRef<Webcam>(null);
   const recognitionRef = useRef<any | null>(null);
@@ -45,6 +44,7 @@ const InterviewSession = () => {
 
   const userId = user?.uid;
 
+  
   useEffect(() => {
     if (!interviewId || !userId) {
       setLoading(false);
@@ -56,8 +56,8 @@ const InterviewSession = () => {
         const ref = doc(db, "interviews", interviewId);
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          const data = snap.data() as InterviewType;
-          setInterview({ ...data, id: snap.id });
+          setInterview({ ...snap.data() as InterviewType, id: snap.id });
+          setTypedAnswers(new Array(snap.data().questions.length).fill(""));
         }
       } catch (err) {
         console.error("Error fetching interview:", err);
@@ -69,29 +69,30 @@ const InterviewSession = () => {
     fetchInterview();
   }, [interviewId, userId]);
 
+  
   useEffect(() => {
     currentIndexRef.current = currentQnIndex;
   }, [currentQnIndex]);
 
+  
   useEffect(() => {
-    return () => window.speechSynthesis.cancel();
+    return () => {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
   }, []);
 
   const getCurrentQuestion = () => {
-    if (
-      !interview ||
-      !interview.questions ||
-      !interview.questions[currentQnIndex]
-    ) {
-      return null;
-    }
-    return interview.questions[currentQnIndex];
+    return interview?.questions?.[currentQnIndex] || null;
   };
 
   const currentQuestion = getCurrentQuestion();
 
   const readQuestionAloud = () => {
     if (!currentQuestion?.question) return;
+    
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(currentQuestion.question);
     utterance.lang = "en-US";
@@ -99,9 +100,7 @@ const InterviewSession = () => {
   };
 
   const toggleRecording = () => {
-    if (
-      !("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
-    ) {
+    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
       alert("Speech recognition is not supported in this browser.");
       return;
     }
@@ -117,7 +116,7 @@ const InterviewSession = () => {
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript.trim();
         const idx = currentIndexRef.current;
-        setTypedAnswers((prev) => {
+        setTypedAnswers(prev => {
           const updated = [...prev];
           updated[idx] = (updated[idx] || "") + " " + transcript;
           return updated;
@@ -126,7 +125,6 @@ const InterviewSession = () => {
 
       recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
-        alert("Speech recognition failed.");
         setIsRecording(false);
       };
 
@@ -139,88 +137,38 @@ const InterviewSession = () => {
 
     if (isRecording) {
       recognitionRef.current.stop();
-      setIsRecording(false);
     } else {
       recognitionRef.current.start();
-      setIsRecording(true);
     }
-  };
-
-  const getAIResponse = async (
-    question: string,
-    userAns: string,
-    correctAns: string
-  ) => {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      generationConfig: {
-        maxOutputTokens: 8192,
-        temperature: 0.7,
-      },
-    });
-
-    const prompt = `
-  Question: "${question}"
-  User Answer: "${userAns}"
-  Correct Answer: "${correctAns}"
-  Please compare the user's answer to the correct answer, and provide a rating (from 1 to 10) and feedback in JSON format like:
-  {
-    "rating": 7,
-    "feedback": "Your answer is partially correct..."
-  }
-  Only return raw JSON. Do not include markdown or code formatting.
-    `;
-
-    try {
-      const result = await model.generateContent(prompt);
-      let response = result.response.text();
-
-      response = response.replace(/```json|```/g, "").trim();
-
-      const parsed = JSON.parse(response);
-      return {
-        rating: parsed.rating ?? 0,
-        feedback: parsed.feedback ?? "No feedback provided.",
-      };
-    } catch (err: any) {
-      console.error("Gemini AI error:", err);
-
-      if (err.message.includes("429")) {
-        alert("Too many requests to Gemini API. Please wait and try again.");
-      }
-
-      return {
-        rating: 0,
-        feedback: "Unable to generate feedback at the moment. Try again later.",
-      };
-    }
+    setIsRecording(!isRecording);
   };
 
   const submitAnswer = async () => {
     if (!interview || !userId || !interviewId || !currentQuestion) return;
 
-    const answer = typedAnswers[currentQnIndex];
-
-    if (!answer || answer.trim() === "") {
-      alert("Please type or record an answer before submitting.");
+    const answer = typedAnswers[currentQnIndex]?.trim();
+    if (!answer) {
+      alert("Please provide an answer before submitting.");
       return;
     }
 
-    const question = currentQuestion.question;
-    const correct_ans = currentQuestion.answer || "";
-    const docId = `${userId}_${interviewId}_${currentQnIndex}`;
-    const docRef = doc(db, "userAnswers", docId);
-
+    setIsSubmitting(true);
+    
     try {
+      const docId = `${userId}_${interviewId}_${currentQnIndex}`;
+      const docRef = doc(db, "userAnswers", docId);
+
       const existingSnap = await getDoc(docRef);
       let rating = 0;
       let feedback = "Not evaluated.";
 
-      if (
-        !existingSnap.exists() ||
-        (existingSnap.exists() && answer !== existingSnap.data().user_ans)
-      ) {
-        const aiResult = await getAIResponse(question, answer, correct_ans);
+      
+      if (!existingSnap.exists() || answer !== existingSnap.data().user_ans) {
+        const aiResult = await evaluateAnswer(
+          currentQuestion.question,
+          answer,
+          currentQuestion.answer || ""
+        );
         rating = aiResult.rating;
         feedback = aiResult.feedback;
       } else {
@@ -231,8 +179,8 @@ const InterviewSession = () => {
       const newAnswer: UserAnswer = {
         id: docId,
         mockIdRef: interviewId,
-        question,
-        correct_ans,
+        question: currentQuestion.question,
+        correct_ans: currentQuestion.answer || "",
         user_ans: answer,
         feedback,
         rating,
@@ -245,18 +193,21 @@ const InterviewSession = () => {
 
       await setDoc(docRef, newAnswer);
 
-      setSubmittedIndexes((prev) =>
+      setSubmittedIndexes(prev =>
         prev.includes(currentQnIndex) ? prev : [...prev, currentQnIndex]
       );
 
+      
       if (currentQnIndex < interview.questions.length - 1) {
-        setCurrentQnIndex((prev) => prev + 1);
+        setCurrentQnIndex(prev => prev + 1);
       } else {
         navigate(`/feedback/${interviewId}`);
       }
     } catch (err) {
       console.error("Error saving answer:", err);
       alert("Failed to save the answer. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -286,8 +237,8 @@ const InterviewSession = () => {
   }
 
   return (
-    <div className="flex  min-h-[calc(100vh-160px)] md:flex-row flex-col-reverse gap-6 md:gap-10 md:px-10 px-4 pt-6">
-      <div className="md:w-[50%]  flex-1 bg-white shadow border-2 rounded-2xl p-4 md:p-6 h-fit">
+    <div className="flex min-h-[calc(100vh-160px)] md:flex-row flex-col-reverse gap-6 md:gap-10 md:px-10 px-4 pt-6">
+      <div className="md:w-[50%] flex-1 bg-white shadow border-2 rounded-2xl p-4 md:p-6 h-fit">
         <h2 className="text-2xl font-bold mb-4">
           Mock Interview: {interview.position}
         </h2>
@@ -296,25 +247,19 @@ const InterviewSession = () => {
           <p className="text-lg text-gray-600">
             Question {currentQnIndex + 1} of {interview.questions.length}
           </p>
-          {currentQuestion ? (
-            <div className="text-xl font-semibold text-gray-700 flex items-start gap-2">
-              {currentQuestion.question}
+          
+          <div className="text-xl font-semibold text-gray-700 flex items-start gap-2">
+            {currentQuestion?.question || "Question not available"}
+            {currentQuestion && (
               <button
                 onClick={readQuestionAloud}
-                disabled={!currentQuestion}
-                className={`text-gray-500 hover:text-gray-700 transition ${
-                  !currentQuestion ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className="text-gray-500 hover:text-gray-700 transition"
                 aria-label="Read question aloud"
               >
                 <Volume2 />
               </button>
-            </div>
-          ) : (
-            <p className="text-xl font-semibold text-red-500">
-              Question not available
-            </p>
-          )}
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-2">
             {interview.questions.map((_, index) => (
@@ -346,7 +291,7 @@ const InterviewSession = () => {
             className="w-full p-3 border rounded-lg resize-none h-32"
           />
 
-          <div className="flex flex-col sm:flex-row items-center justify-end gap-4 ">
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-4">
             <button
               onClick={toggleRecording}
               disabled={!currentQuestion}
@@ -363,17 +308,28 @@ const InterviewSession = () => {
             <button
               onClick={submitAnswer}
               disabled={
-                submittedIndexes.includes(currentQnIndex) || !currentQuestion
+                submittedIndexes.includes(currentQnIndex) || 
+                !currentQuestion ||
+                !typedAnswers[currentQnIndex]?.trim() ||
+                isSubmitting
               }
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white ${
-                submittedIndexes.includes(currentQnIndex) || !currentQuestion
+                submittedIndexes.includes(currentQnIndex) || 
+                !currentQuestion ||
+                isSubmitting
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-primary"
+                  : "bg-primary hover:bg-primary-dark"
               }`}
             >
-              <ArrowRightCircle size={20} />
+              {isSubmitting ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <ArrowRightCircle size={20} />
+              )}
               {submittedIndexes.includes(currentQnIndex)
-                ? "Already Submitted"
+                ? "Submitted"
+                : isSubmitting
+                ? "Submitting..."
                 : "Submit Answer"}
             </button>
           </div>
@@ -383,20 +339,14 @@ const InterviewSession = () => {
       <div className="md:w-[30%] w-full flex flex-col gap-4">
         <div className="p-4 bg-blue-100 border-l-4 border-blue-500 text-blue-800 rounded-md shadow text-sm md:text-base">
           <div className="flex items-start gap-3 text-start">
-            <span>
-              <AlertTriangle className="w-5 h-5 mt-1 text-blue-600" />
-            </span>
+            <AlertTriangle className="w-5 h-5 mt-1 text-blue-600" />
             <div>
               <p>
-                Please enable your webcam and microphone to start the
-                AI-generated mock interview. The interview consists of five
-                questions. You’ll receive a personalized report based on your
-                responses at the end.
+                Enable your webcam and microphone for a realistic mock interview experience.
+                You'll receive personalized feedback after completing all questions.
               </p>
-              <p className="mt-4">
-                <span className="font-medium">Note:</span> Your video is{" "}
-                <strong>never recorded</strong>. You can disable your webcam at
-                any time.
+              <p className="mt-4 font-medium">
+                Note: Your video is never recorded or stored.
               </p>
             </div>
           </div>
@@ -416,8 +366,8 @@ const InterviewSession = () => {
         </div>
 
         <button
-          onClick={() => setCameraOn((prev) => !prev)}
-          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow"
+          onClick={() => setCameraOn(prev => !prev)}
+          className="flex items-center justify-center gap-2 bg-black text-white px-4 py-2 rounded-xl shadow hover:bg-gray-800 transition"
         >
           {cameraOn ? (
             <>
