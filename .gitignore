@@ -7,9 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Firebase debug logs
+firebase-debug.log
+firebase-debug.*
+
+# Firebase local state/cache
+.firebase/
+.firebaserc
+
+# Build output
 node_modules
 dist
 dist-ssr
+
+# Local environment files
 *.local
 .env
 .env*
